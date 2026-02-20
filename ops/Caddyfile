@@ -1,0 +1,54 @@
+{
+  servers {
+    protocols h1 h2
+  }
+}
+
+fe6103-c0005.sna94.uni-tuebingen.de {
+
+  tls internal
+  encode zstd gzip
+
+  @api_auth path /login* /register* /auth/* /verify-email* /change-password* /reset-password*
+  handle @api_auth {
+    reverse_proxy api:8000
+  }
+
+  @auth_callback path_regexp auth_callback ^/auth-return/.+
+  handle @auth_callback {
+    reverse_proxy api:8000
+  }
+
+  handle /api/* {
+    reverse_proxy api:8000
+  }
+
+  @web_alias path /web /web/
+  handle @web_alias {
+    redir / 308
+  }
+
+  @auth_return_root path /auth-return /auth-return/
+  redir @auth_return_root /app/auth-return?{query} 308
+
+  @couchdb_up path /couchdb/_up
+  handle @couchdb_up {
+    respond "not found" 404
+  }
+
+  handle_path /couchdb/* {
+    reverse_proxy couchdb:5984
+  }
+
+  @app_noslash path /app
+  redir @app_noslash /app/ 308
+
+  @app path_regexp app ^/app(/.*)?$
+  handle @app {
+    reverse_proxy app:3000
+  }
+
+  handle {
+    reverse_proxy web:3001
+  }
+}

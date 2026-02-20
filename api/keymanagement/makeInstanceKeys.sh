@@ -19,15 +19,16 @@ KEYS_PATH="${API_ROOT}/keys"
 
 # Local .env
 ENV_FILE=${1:-${API_ROOT}/.env}
-if [ -f $ENV_FILE ]; then
-    # Load Environment Variables
-    export $(cat $ENV_FILE | grep -v '#' | sed 's/\r$//' | awk '/=/ {print $1}' )
+if [ -f "$ENV_FILE" ]; then
+    # shellcheck source=/dev/null
+    set -a
+    . "$ENV_FILE"
+    set +a
 fi
 
 export HOST_TARGET="${PROFILE_NAME:-conductor}"
 
-
-echo "Keys for ${PROFILE_NAME}: ${HOST_TARGET} from ${ENV_FILE}"
+echo "Keys for profile ${HOST_TARGET} from ${ENV_FILE}"
 mkdir -p "$KEYS_PATH"
 openssl genpkey -algorithm RSA -out "${KEYS_PATH}/${HOST_TARGET}_private_key.pem" -pkeyopt rsa_keygen_bits:2048
 openssl rsa -pubout -in "${KEYS_PATH}/${HOST_TARGET}_private_key.pem" -out "${KEYS_PATH}/${HOST_TARGET}_public_key.pem"
@@ -38,17 +39,28 @@ export FLATTENED_KEY=$(cat "${KEYS_PATH}/${HOST_TARGET}_public_key.pem" | awk '{
 
 echo $FLATTENED_KEY > "${KEYS_PATH}/${HOST_TARGET}_rsa_2048_public_key.pem.flattened"
 
+# Keys are bind-mounted into the API container, which runs as a non-root user.
+# Ensure they are world-readable so startup/auth exchange cannot fail with EACCES.
+chmod 0644 \
+  "${KEYS_PATH}/${HOST_TARGET}_private_key.pem" \
+  "${KEYS_PATH}/${HOST_TARGET}_public_key.pem" \
+  "${KEYS_PATH}/${HOST_TARGET}_rsa_2048_public_key.pem.flattened"
+
 ## Generate the jwt.ini file needed for couch deployment, contains the public key
 ## used to validate signed JWTs for authentication to couchdb
 
+if command -v uuidgen >/dev/null 2>&1; then
+    INSTANCE_UUID="$(uuidgen | tr '[:upper:]' '[:lower:]' | tr -d '-')"
+else
+    INSTANCE_UUID="$(cat /proc/sys/kernel/random/uuid | tr '[:upper:]' '[:lower:]' | tr -d '-')"
+fi
+
 cp ${API_ROOT}/couchdb/local.ini.dist ${API_ROOT}/couchdb/local.ini 
-sed -i.bak "s/secret = db7a1a86dbc734593febf8ca6fdf0cf8/secret = ${FAIMS_COOKIE_SECRET}/" ${API_ROOT}/couchdb/local.ini
-sed -i.bak "s/uuid = adf990d5dd21b735f65d4140ad1f10c2/uuid = "`uuid`"/" ${API_ROOT}/couchdb/local.ini
+sed -i.bak "s/secret = db7a1a86dbc734593febf8ca6fdf0cf8/secret = ${FAIMS_COOKIE_SECRET}/" ${API_ROOT}/couchdb/local.ini || true
+sed -i.bak "s/uuid = adf990d5dd21b735f65d4140ad1f10c2/uuid = ${INSTANCE_UUID}/" ${API_ROOT}/couchdb/local.ini || true
 echo "[jwt_keys]" >> ${API_ROOT}/couchdb/local.ini
-echo "rsa:${PROFILE_NAME}=${FLATTENED_KEY}" >> ${API_ROOT}/couchdb/local.ini
-echo '[admin]' >> ${API_ROOT}/couchdb/local.ini
+echo "rsa:${HOST_TARGET}=${FLATTENED_KEY}" >> ${API_ROOT}/couchdb/local.ini
+echo '[admins]' >> ${API_ROOT}/couchdb/local.ini
 echo "admin=${COUCHDB_PASSWORD}" >> ${API_ROOT}/couchdb/local.ini
 
 cat ${API_ROOT}/couchdb/local.ini
-
-

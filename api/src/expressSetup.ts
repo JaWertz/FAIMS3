@@ -107,6 +107,18 @@ if (bugsnagEnabled) {
 
 export const app: express.Express = express();
 
+const trustProxyConfig = process.env.TRUST_PROXY?.trim().toLowerCase();
+if (trustProxyConfig !== undefined && trustProxyConfig !== '') {
+  if (['1', 'true'].includes(trustProxyConfig)) {
+    app.set('trust proxy', 1);
+  } else if (['0', 'false'].includes(trustProxyConfig)) {
+    app.set('trust proxy', false);
+  } else {
+    // Allow full express trust-proxy syntax, e.g. subnet lists.
+    app.set('trust proxy', process.env.TRUST_PROXY as string);
+  }
+}
+
 // Bugsnag comes first - passes through
 let bugsnagMiddleware = undefined;
 if (bugsnagEnabled) {

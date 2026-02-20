@@ -1,0 +1,87 @@
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./ops/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - app
+      - api
+
+  couchdb:
+    build:
+      context: api/couchdb
+      dockerfile: Dockerfile
+    env_file:
+      - ./ops/api.env.prod
+    volumes:
+      - couchdb_data:/opt/couchdb/data
+    # NICHT nach außen publishen:
+    ports: []
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:5984/_up"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  api:
+    volumes:
+      - ./api/keys:/app/keys:ro
+    environment:
+      PROFILE_NAME: default
+      KEY_SOURCE: FILE
+      KEY_FILE_PATH: /app
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+      target: runner
+      args:
+        PACKAGE_NAME: "@faims3/api"
+        NODE_RUN_DIR: "api/build/src"
+    env_file:
+      - ./ops/api.env.prod
+    depends_on:
+      couchdb:
+        condition: service_healthy
+    # nur lokal im WSL sichtbar (Caddy proxyt):
+    #ports:
+    #  - "127.0.0.1:8080:8000"
+    expose:
+      - "8000"
+
+  web:
+    build:
+      context: .
+      dockerfile: ./ops/web.prod.Dockerfile
+    env_file:
+      - ./web/.env.prod
+    #ports:
+    #  - "127.0.0.1:3001:3001"
+    depends_on:
+      - api
+    expose:
+      - "3001"
+
+  app:
+    build:
+      context: .
+      dockerfile: ./ops/app.prod.Dockerfile
+    env_file:
+      - ./app/.env.prod
+    #ports:
+    #  - "127.0.0.1:3000:3000"
+    depends_on:
+      - api
+    expose:
+      - "3000"
+
+volumes:
+  couchdb_data:
+  caddy_data:
+  caddy_config:

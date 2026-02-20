@@ -3,6 +3,14 @@ import react from '@vitejs/plugin-react-swc';
 import {defineConfig} from 'vite';
 import {tanstackRouter} from '@tanstack/router-plugin/vite';
 
+const ALLOWED_HOSTS = (
+  process.env.VITE_ALLOWED_HOSTS ??
+  'fe6103-c0005.sna94.uni-tuebingen.de,localhost,127.0.0.1'
+)
+  .split(',')
+  .map(host => host.trim())
+  .filter(Boolean);
+
 export default defineConfig({
   // Just a hack to get this to typecheck - works fine??
   plugins: [
@@ -20,7 +28,16 @@ export default defineConfig({
   server: {
     port: 3001,
     host: true,
+    strictPort: true,
+    allowedHosts: ALLOWED_HOSTS,
+    cors: true,
     fs: {allow: ['..']},
+  },
+  preview: {
+    port: 3001,
+    host: true,
+    strictPort: true,
+    allowedHosts: ALLOWED_HOSTS,
   },
   optimizeDeps: {
     include: [

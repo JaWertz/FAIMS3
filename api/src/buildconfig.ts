@@ -20,7 +20,7 @@
  */
 
 import {slugify} from '@faims3/data-model';
-import {existsSync} from 'fs';
+import {accessSync, constants as fsConstants, existsSync} from 'fs';
 import {v4 as uuidv4} from 'uuid';
 import {
   createEmailService,
@@ -163,6 +163,17 @@ function key_file_path(): string {
   }
 }
 
+function assertReadableKeyFile(keyfile: string, keyType: 'Private' | 'Public') {
+  try {
+    accessSync(keyfile, fsConstants.R_OK);
+  } catch {
+    throw new Error(
+      `${keyType} key file ${keyfile} exists but is not readable by the API process. ` +
+        'Fix file permissions (e.g. chmod 644 on generated key files).'
+    );
+  }
+}
+
 export function private_key_path(): string {
   let host = process.env.PROFILE_NAME;
   if (host === '' || host === undefined) {
@@ -171,6 +182,7 @@ export function private_key_path(): string {
   const path = key_file_path();
   const keyfile = `${path}/keys/${host}_private_key.pem`;
   if (existsSync(keyfile)) {
+    assertReadableKeyFile(keyfile, 'Private');
     console.log(`Private key file ${keyfile} exists.`);
     return keyfile;
   } else {
@@ -188,6 +200,7 @@ export function public_key_path(): string {
   const path = key_file_path();
   const keyfile = `${path}/keys/${host}_public_key.pem`;
   if (existsSync(keyfile)) {
+    assertReadableKeyFile(keyfile, 'Public');
     console.log(`Public key file ${keyfile} exists.`);
     return keyfile;
   } else {
@@ -712,4 +725,3 @@ function bugsnagApiKey(): string | undefined {
 }
 
 export const BUGSNAG_API_KEY = bugsnagApiKey();
-
