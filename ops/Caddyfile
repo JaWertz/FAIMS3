@@ -1,4 +1,6 @@
-{
+{ 
+  email jakob.wertz@uni-tuebingen.de
+  acme_ca https://acme-v02.api.letsencrypt.org/directory
   servers {
     protocols h1 h2
   }
@@ -6,7 +8,9 @@
 
 fe6103-c0005.sna94.uni-tuebingen.de {
 
-  tls internal
+  tls {
+    issuer acme
+  }
   encode zstd gzip
 
   @api_auth path /login* /register* /auth/* /verify-email* /change-password* /reset-password*
