@@ -12,6 +12,7 @@ import {APP_ID, APP_NAME, IS_WEB_PLATFORM} from '../../../buildconfig';
 import {Server} from '../../../context/slices/projectSlice';
 import {useIsOnline} from '../../../utils/customHooks';
 import {QRCodeButtonOnly, ShortCodeOnlyComponent} from './shortCodeOnly';
+import {getWebAuthReturnUrl} from '../../../utils/helpers';
 
 const OnboardingComponent = ({
   scanQr,
@@ -86,7 +87,7 @@ const OnboardingComponent = ({
             }
             onClick={async () => {
               if (IS_WEB_PLATFORM) {
-                const redirect = `${window.location.protocol}//${window.location.host}/auth-return`;
+                const redirect = getWebAuthReturnUrl();
                 window.location.href =
                   server.serverUrl + '/login?redirect=' + redirect;
               } else {

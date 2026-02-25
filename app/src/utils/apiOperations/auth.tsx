@@ -19,6 +19,10 @@ export const requestTokenRefresh = async (
     listingId,
     username,
     '/api/auth/refresh',
-    input
+    input,
+    // Refresh must not depend on current access token validity.
+    // If we send an expired bearer token here, some deployments reject
+    // the request before refresh logic runs.
+    {useToken: false}
   );
 };

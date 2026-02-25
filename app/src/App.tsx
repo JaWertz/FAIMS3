@@ -251,6 +251,10 @@ const routes: RouteObject[] = [
   },
 ];
 
+const rawBasePath = import.meta.env.VITE_BASE_PATH || '/';
+const routerBasePath =
+  rawBasePath === '/' ? '/' : rawBasePath.replace(/\/+$/, '');
+
 /**
  * Create the data router instance.
  *
@@ -264,7 +268,7 @@ const routes: RouteObject[] = [
  *
  * @see https://reactrouter.com/en/main/routers/create-browser-router
  */
-const router = createBrowserRouter(routes);
+const router = createBrowserRouter(routes, {basename: routerBasePath});
 
 // =============================================================================
 // APPLICATION ROOT

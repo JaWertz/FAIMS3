@@ -18,7 +18,7 @@ import {APP_ID, IS_WEB_PLATFORM} from '../../../buildconfig';
 import {useNotification} from '../../../context/popup';
 import {addAlert} from '../../../context/slices/alertSlice';
 import {useAppDispatch} from '../../../context/store';
-import {replaceOrAppendRedirect} from '../../../utils/helpers';
+import {getWebAuthReturnUrl, replaceOrAppendRedirect} from '../../../utils/helpers';
 import {Server} from '../../../context/slices/projectSlice';
 import {QRCodeButton} from '@faims3/forms';
 
@@ -167,7 +167,7 @@ export const ShortCodeOnlyComponent = (props: ShortCodeOnlyComponentProps) => {
     const url = `${serverInfo.serverUrl}/register?inviteId=${inviteCode}`;
 
     if (IS_WEB_PLATFORM) {
-      const redirect = `${window.location.protocol}//${window.location.host}/auth-return`;
+      const redirect = getWebAuthReturnUrl();
       window.location.href = url + '&redirect=' + redirect;
     } else {
       await Browser.open({

@@ -43,7 +43,7 @@ import {useNotification} from '../../context/popup';
 import {addAlert} from '../../context/slices/alertSlice';
 import {Server} from '../../context/slices/projectSlice';
 import {useAppDispatch} from '../../context/store';
-import {replaceOrAppendRedirect} from '../../utils/helpers';
+import {getWebAuthReturnUrl, replaceOrAppendRedirect} from '../../utils/helpers';
 import MainCard from '../components/ui/main-card';
 import {QRCodeButton} from '@faims3/forms';
 
@@ -132,7 +132,7 @@ export function ShortCodeRegistration(props: ShortCodeProps) {
     showSuccess('Initiating registration...');
 
     if (IS_WEB_PLATFORM) {
-      const redirect = `${window.location.protocol}//${window.location.host}/auth-return`;
+      const redirect = getWebAuthReturnUrl();
       window.location.href = url + '&redirect=' + redirect;
     } else {
       await Browser.open({

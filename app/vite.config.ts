@@ -19,43 +19,56 @@
  */
 /// <reference types="vitest" />
 
-import {defineConfig} from 'vite';
+import {defineConfig, loadEnv} from 'vite';
 import react from '@vitejs/plugin-react-swc';
 
-const config: any = {
-  base: '/',
-  build: {
-    outDir: 'build',
-  },
-  server: {
-    host: '0.0.0.0',
-    port: 3000,
-    strictPort: true,
-  },
-  preview: {
-    port: 3000,
-    host: true,
-  },
-  resolve: {
-    alias: {
-      events: 'rollup-plugin-node-polyfills/polyfills/events',
-    },
-    preserveSymlinks: false,
-  },
-  plugins: [react({jsxImportSource: '@emotion/react'})],
-  define: {
-    global: 'globalThis',
-    'process.env': {} /* some libraries check this */,
-    __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
-  },
-  optimizeDeps: {
-    exclude: ['@ionic/pwa-elements'],
-  },
-};
+const ALLOWED_HOSTS = (
+  process.env.VITE_ALLOWED_HOSTS ??
+  'fe6103-c0005.sna94.uni-tuebingen.de,localhost,127.0.0.1'
+)
+  .split(',')
+  .map(host => host.trim())
+  .filter(Boolean);
 
 // Conditional configuration.  If run with --mode sourcemap
 // we will build with sourcemaps enabled and output to a different directory.
 export default defineConfig(({mode}) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const basePath = env.VITE_BASE_PATH || '/';
+  const config: any = {
+    base: basePath,
+    build: {
+      outDir: 'build',
+    },
+    server: {
+      host: '0.0.0.0',
+      port: 3000,
+      strictPort: true,
+      allowedHosts: ALLOWED_HOSTS,
+    },
+    preview: {
+      port: 3000,
+      host: true,
+      strictPort: true,
+      allowedHosts: ALLOWED_HOSTS,
+    },
+    resolve: {
+      alias: {
+        events: 'rollup-plugin-node-polyfills/polyfills/events',
+      },
+      preserveSymlinks: false,
+    },
+    plugins: [react({jsxImportSource: '@emotion/react'})],
+    define: {
+      global: 'globalThis',
+      'process.env': {} /* some libraries check this */,
+      __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
+    },
+    optimizeDeps: {
+      exclude: ['@ionic/pwa-elements'],
+    },
+  };
+
   if (mode === 'sourcemap') {
     config.build.sourcemap = true;
     config.build.outDir = 'build-sourcemap';

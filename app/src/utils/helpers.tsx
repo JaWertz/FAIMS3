@@ -49,3 +49,19 @@ export const replaceOrAppendRedirect = ({
     return url;
   }
 };
+
+/**
+ * Builds the web redirect callback URL for auth flows, respecting a Vite base
+ * path when the app is hosted under a subpath (e.g. /app/).
+ */
+export const getWebAuthReturnUrl = (): string => {
+  const rawBasePath = import.meta.env.VITE_BASE_PATH || '/';
+  const normalizedBasePath = rawBasePath.startsWith('/')
+    ? rawBasePath
+    : `/${rawBasePath}`;
+  const basePath = normalizedBasePath.endsWith('/')
+    ? normalizedBasePath
+    : `${normalizedBasePath}/`;
+
+  return `${window.location.origin}${basePath}auth-return`;
+};

@@ -137,11 +137,50 @@ export function createRemotePouchDbFromConnectionInfo<Content extends {}>({
   // TODO: Use a new enough pouchdb such that we don't need the fetch hook, see
   // https://github.com/pouchdb/pouchdb/issues/8387
 
-  // Patches the fetch with the jwt to authorise to remote DB
+  // Legacy persisted state may contain a prefixed token.
+  const normalizedJwtToken =
+    typeof jwtToken === 'string'
+      ? jwtToken.replace(/^Bearer\s+/i, '').trim()
+      : '';
+
+  // Patches the fetch with the jwt to authorise to remote DB.
+  // Handles both fetch(url, opts) and fetch(Request, opts) call styles.
   pouchOptions.fetch = function (url: any, opts: any) {
-    // Embed the JWT into the payload
-    opts.headers.set('Authorization', `Bearer ${jwtToken}`);
-    return PouchDB.fetch(url, opts);
+    const requestOptions = opts || {};
+
+    if (normalizedJwtToken) {
+      const authHeader = `Bearer ${normalizedJwtToken}`;
+      // Some PouchDB code paths pass a Request object instead of plain URL.
+      // In that case, clone headers on the Request and re-create it.
+      if (typeof Request !== 'undefined' && url instanceof Request) {
+        const mergedHeaders = new Headers(url.headers || {});
+        if (requestOptions.headers) {
+          const optionHeaders = new Headers(requestOptions.headers);
+          optionHeaders.forEach((value, key) => {
+            mergedHeaders.set(key, value);
+          });
+        }
+        mergedHeaders.set('Authorization', authHeader);
+
+        const request = new Request(url, {
+          ...requestOptions,
+          headers: mergedHeaders,
+        });
+        return PouchDB.fetch(request);
+      } else {
+        const headers = requestOptions.headers;
+        if (headers && typeof headers.set === 'function') {
+          headers.set('Authorization', authHeader);
+        } else {
+          requestOptions.headers = {
+            ...(headers || {}),
+            Authorization: authHeader,
+          };
+        }
+      }
+    }
+
+    return PouchDB.fetch(url, requestOptions);
   };
 
   // Derive the connection string (includes port if needed)

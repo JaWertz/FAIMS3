@@ -3,6 +3,7 @@ import {Browser} from '@capacitor/browser';
 import {Button, ButtonProps} from '@mui/material';
 import React from 'react';
 import {APP_ID, IS_WEB_PLATFORM} from '../../../buildconfig';
+import {getWebAuthReturnUrl} from '../../../utils/helpers';
 
 export type LoginButtonProps = {
   conductor_url: string;
@@ -30,7 +31,7 @@ export function LoginButton(props: LoginButtonProps) {
       startIcon={props.startIcon}
       onClick={async () => {
         if (IS_WEB_PLATFORM) {
-          const redirect = `${window.location.protocol}//${window.location.host}/auth-return`;
+          const redirect = getWebAuthReturnUrl();
           window.location.href =
             props.conductor_url + '/login?redirect=' + redirect;
         } else {

@@ -1227,14 +1227,6 @@ export const updateDatabaseCredentials = createAsyncThunk<
   for (const project of Object.values(server.projects)) {
     if (project.isActivated && project.database) {
       try {
-        // Check the couch DB url has been populated
-        if (!server.couchDbUrl) {
-          // abort
-          throw new Error(
-            `Cannot update connection when we don't know the couchDBUrl. Server ID: ${server.serverId}. Project ID: ${project.projectId}`
-          );
-        }
-
         // check database and remote are defined
         if (!project.database || !project.database.remote) {
           throw new Error(
@@ -1245,6 +1237,16 @@ export const updateDatabaseCredentials = createAsyncThunk<
         if (!project.isActivated) {
           throw new Error(
             `You cannot update the connection of an inactive project. Server ID: ${server.serverId}. Project ID: ${project.projectId}`
+          );
+        }
+
+        const existingConnectionConfiguration =
+          project.database.remote.connectionConfiguration;
+        const resolvedCouchUrl =
+          server.couchDbUrl || existingConnectionConfiguration.couchUrl;
+        if (!resolvedCouchUrl) {
+          throw new Error(
+            `Cannot update connection without a couchDBUrl. Server ID: ${server.serverId}. Project ID: ${project.projectId}`
           );
         }
 
@@ -1274,11 +1276,13 @@ export const updateDatabaseCredentials = createAsyncThunk<
         const connectionConfiguration: DatabaseConnectionConfig = {
           // push in the specified jwt
           jwtToken: token,
-          // these are not configurable from this thunk
-          couchUrl: server.couchDbUrl || '',
-          databaseName: getRemoteDatabaseNameFromId({
-            projectId: project.projectId,
-          }),
+          // preserve previously known settings when server metadata is missing
+          couchUrl: resolvedCouchUrl,
+          databaseName:
+            existingConnectionConfiguration.databaseName ||
+            getRemoteDatabaseNameFromId({
+              projectId: project.projectId,
+            }),
         };
 
         // Step 4: Create new remote database
@@ -1740,12 +1744,11 @@ function findValidToken(
 
   // Try the active user first - this is the best bet
   if (activeUser && activeUser.serverId === server.serverId) {
-    if (!authState.isAuthenticated) {
-      throw new Error(
-        `You cannot refresh the project list for a logged out active user. Server ID ${serverId}.`
-      );
+    const activeConnection =
+      authState.servers[activeUser.serverId]?.users[activeUser.username];
+    if (isTokenValid(activeConnection)) {
+      return activeConnection.token;
     }
-    return activeUser.token;
   }
 
   // Fall back to any valid token for this server

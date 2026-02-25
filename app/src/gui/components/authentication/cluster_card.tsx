@@ -57,6 +57,7 @@ import {
 import {useAppDispatch, useAppSelector} from '../../../context/store';
 import MainCard from '../ui/main-card';
 import {LoginButton} from './login_form';
+import {getWebAuthReturnUrl} from '../../../utils/helpers';
 
 const ADD_NEW_USER_FOR_LOGGED_IN_SERVER_ENABLED = true;
 
@@ -137,7 +138,7 @@ export default function ClusterCard(props: ClusterCardProps) {
 
   const handleAddNewUser = async () => {
     if (IS_WEB_PLATFORM) {
-      const redirect = `${window.location.protocol}//${window.location.host}/auth-return`;
+      const redirect = getWebAuthReturnUrl();
       window.location.href =
         props.conductor_url + '/login?redirect=' + redirect;
     } else {
