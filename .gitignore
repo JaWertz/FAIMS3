@@ -6,3 +6,11 @@ out
 app/public/manifest.json
 .env
 *:Zone.Identifier
+
+# sensitive env files
+**/.env
+**/.env.local
+**/.env.prod
+ops/api.env.prod
+api/.env.keygen
+!**/.env.dist
